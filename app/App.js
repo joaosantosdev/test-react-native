@@ -4,7 +4,7 @@ import axios from 'axios'
 import {Button} from "./components/Button";
 
 const styleContent = {flex: 1, backgroundColor: '#f4f3f4', padding: 10, alignItems: 'center'};
-const input = {padding: 10, backgroundColor: '#FFF', width: 300, marginTop: 10}
+const input = {padding: 10, backgroundColor: '#FFF', width: 300, marginTop: 10,borderRadius:10,fontSize:15}
 export default class App extends React.Component {
     http
 
@@ -15,8 +15,8 @@ export default class App extends React.Component {
         });
         this.state = {
             username: '',
-            user: null
-        }
+            disabled:false
+        };
     }
 
     pesquisar = async () => {
@@ -25,33 +25,29 @@ export default class App extends React.Component {
             alert('Informe o username')
             return;
         }
-        await this.http.get(`/${this.state.username.toLocaleLowerCase()}`).then(res => {
-            this.setState({user: res.data})
+        this.setState({disabled:true},async ()=>{
+            await this.http.get(`/${username}/repos`)
 
-        }).catch(err => {
-            alert("Usuario não encontrado")
-            this.setState({user: null})
-        })
+            let username = this.state.username.toLocaleLowerCase();
+            let user = await this.http.get(`/${username}`).then(async res => res.data).catch(err => null);
+            if(user){
+                let repos = await this.http.get(`/${username}/repos`).then(async res => res.data).catch(err => null);
+                this.props.navigation.push('UserInfo',{user,repos})
+            }else{
+                alert("Usuario não encontrado")
+            }
+            this.setState({disabled:false})
+        });
+
     }
     changeUsername = (username) => {
         this.setState({username})
-    }
-    renderInfoUsername = () => {
-        if (this.state.user === null)
-            return;
-
-        return <View style={{alignItems: 'center', marginTop: 10}}>
-            <Image style={{width: 150, height: 150}} source={{uri: this.state.user.avatar_url}}/>
-            <Text style={{fontSize: 20}}>{this.state.user.name}</Text>
-            <Text style={{textAlign: 'center'}}>{this.state.user.bio}</Text>
-            <Text>{this.state.user.location}</Text>
-        </View>
     }
 
     render() {
         return <ScrollView style={{backgroundColor: '#f4f3f4'}}>
             <View style={styleContent}>
-                <Image source={require('./logo.png')} style={{height: 200, width: 200}}/>
+                <Image source={require('./assets/logo.png')} style={{height: 200, width: 200}}/>
 
                 <TextInput
                     onChangeText={this.changeUsername}
@@ -59,12 +55,11 @@ export default class App extends React.Component {
                 />
                 <View style={{alignItems: 'center', marginTop: 10}}>
                     <Button
+                        disabled={this.state.disabled}
+                        title={this.state.disabled?'Pesquisando...':'Pesquisar'}
                         onPress={this.pesquisar}
                     />
                 </View>
-                {
-                    this.renderInfoUsername()
-                }
             </View>
         </ScrollView>
     }
